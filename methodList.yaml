@@ -1,0 +1,53 @@
+node:
+  ACM:
+  - listCertificates
+  EC2:
+  - describePrefixLists
+  - describeInstances
+  - describeInternetGateways
+  - describeKeyPairs
+  - describeMovingAddresses
+  - describeNatGateways
+  - describeNetworkAcls
+  - describeNetworkInterfaces
+  - describePlacementGroups
+  - describePrefixLists
+  - describeRegions
+  - describeReservedInstances
+  - describeRouteTables
+  - describeScheduledInstances
+  - describeSecurityGroups
+  - describeSnapshots
+  - describeSubnets
+  - describeTags
+  - describeVolumeStatus
+  - describeVolumes
+  - describeVpcClassicLink
+  - describeVpcClassicLinkDnsSupport
+  - describeVpcEndpointServices
+  - describeVpcEndpoints
+  - describeVpcPeeringConnections
+  - describeVpcs
+  ECR:
+  - describeRepositories
+  ECS:
+  - describeClusters
+  - listTaskDefinitions
+  - listTasks
+  - listServices
+  ELB:
+  - describeLoadBalancerPolicies
+  - describeLoadBalancerPolicyTypes
+  - describeLoadBalancers
+  ELBv2:
+  - describeLoadBalancers
+  - describeTargetGroups
+  Lambda:
+  - listFunctions
+  S3:
+  - listBuckets
+  SNS:
+  - listTopics
+  - listSubscriptions
+  SQS:
+  - listQueues 
