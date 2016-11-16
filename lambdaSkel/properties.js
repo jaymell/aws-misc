@@ -1,11 +1,10 @@
-var exports = module.exports = {};
-
-exports.config = {
+var exports = module.exports = {
   buckets: {
-    dev: 'rac-dev-devops1',
-    qa: 'rac-qa-devops',
-    uat: 'rac-uat-devops',
-    breakfix: 'rac-breakfix-devops',
-    prod: 'rac-prod-devops-1'
-  }
+    dev: 'devbucket',
+    qa: 'qabucket',
+    uat: 'uatbucket',
+    breakfix: 'breakfixbucket',
+    prod: 'prodbucket'
+  },
+ credentials: 'credentials.enc'
 };

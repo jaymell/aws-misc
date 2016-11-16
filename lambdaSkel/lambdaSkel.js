@@ -3,34 +3,35 @@ KMS = require('aws-sdk/clients/kms');
 config = require('./properties.js');
 
 var getEnv = function(c) {
-  /* sample context object 
-  {
-    "callbackWaitsForEmptyEventLoop": true,
-    "logGroupName": "/aws/lambda/qa-swift-qa-swift-InitDBa",
-    "logStreamName": "2016/11/12/[$LATEST]c42949838bf44938a9eea37fe2ccb5ec",
-    "functionName": "qa-swift-qa-swift-InitDBa",
-    "memoryLimitInMB": "512",
-    "functionVersion": "$LATEST",
-    "invokeid": "3d927ad3-a8b7-11e6-9398-753911c5e7c6",
-    "awsRequestId": "3d927ad3-a8b7-11e6-9398-753911c5e7c6",
-    "invokedFunctionArn": "arn:aws:lambda:us-east-1:219359266667:function:qa-swift-qa-swift-InitDBa"
-  }
-  */
-  var regex = /(.*)-.*$/;
+  var regex = /^([A-Za-z]+)-.*$/;
+  console.log('regex found: ', regex.exec(c.functionName)[1]);
   return regex.exec(c.functionName)[1];
+};
+
+var testDecrypt = function(err, data) {
+  if (err) throw err;
+  var kms = new KMS();
+  console.log('data: ', data);
+  kms.decrypt({'CiphertextBlob': data.Body}, function(err, decrypted) {
+    if(err) console.log('decrypt error: ', err);
+    console.log(decrypted.Plaintext.toString());
+  });
 };
 
 var handler = function(e, c, cb) {
   var env = getEnv(c);
-  if (!(env in config.buckets) cb(Error("bucket not found"));
+  console.log('env: ', env);
+  if (!(env in config.buckets)) cb(Error("bucket not found"));
   var bucket = config.buckets[env];
-  var s3 = new AWS.S3();
-  // s3.copyObject({
-  // 	Bucket: 
-  // })
+  var s3 = new S3();
+  s3.getObject({
+    Bucket: config.buckets[env],
+    Key: "lambda/" + c.functionName + "/" + config.credentials,
+  }, testDecrypt);
   cb(null, [e, c]);
 }
 
 module.exports = {
   handler: handler
 }; 
+
