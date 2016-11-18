@@ -63,9 +63,13 @@ Resources:
         Fn::Base64:
           Fn::Sub: |
             #!/bin/bash -xv
-            apt update
-            apt install -y python2.7 git vim-common python-pip mongodb
-            pip install ansible awscli
+            exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+            apt-get update
+            apt-get install -y python2.7 git vim-common python-pip mongodb software-properties-common
+            apt-get-add-repository ppa:ansible/ansible
+            apt-get update
+            apt-get install ansible
+            pip install awscli
             git clone https://github.com/jaymell/ansible-misc /root/ansible-misc
             cd /root/ansible-misc && /usr/local/bin/ansible-playbook /root/ansible-misc/playbooks/golang-download-localhost.yml
       BlockDeviceMappings:
