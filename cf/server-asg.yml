@@ -1,0 +1,123 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: server template
+
+Parameters:
+  Vpc:
+    Default: vpc-c2701ca6
+    Type: AWS::EC2::VPC::Id
+  EC2Count:
+    Default: 1
+    Type: Number
+  KeyPair:
+    Default: ''
+    Type: String
+  Subnet0:
+    Default: subnet-5e911e63
+    Type: String
+  Subnet1:
+    Default: subnet-2ecc3a76
+    Type: String
+  Subnet2:
+    Default: subnet-c39847b5
+    Type: String
+  Subnet3:
+    Default: subnet-40e4076a
+    Type: String
+  InstanceType:
+    Default: t2.micro
+    Type: String
+  PublicIPCidr:
+    Default: 47.186.133.28/32
+    Type: String
+  EC2AMI:
+    Default: ami-38de8d2f
+    Type: AWS::EC2::Image::Id
+
+Resources:
+  InstanceSG:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      VpcId:
+        Ref: Vpc
+      Tags:
+        - Key: Name
+          Value: ServerSG
+      GroupDescription: Server Security Group
+      SecurityGroupIngress:
+      - 
+        ToPort: 22
+        FromPort: 22
+        IpProtocol: tcp
+        CidrIp: 0.0.0.0/0
+      - 
+        ToPort: 8080
+        FromPort: 8080
+        IpProtocol: tcp
+        CidrIp: !Ref PublicIPCidr
+
+  LaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      UserData:
+        Fn::Base64:
+          Fn::Sub: |
+            #!/bin/bash -xv
+            apt update
+            apt install -y python2.7 git vim-common python-pip mongodb
+            pip install ansible awscli
+            git clone https://github.com/jaymell/ansible-misc /root/ansible-misc
+            cd /root/ansible-misc && /usr/local/bin/ansible-playbook /root/ansible-misc/playbooks/golang-download-localhost.yml
+      BlockDeviceMappings:
+      - DeviceName: "/dev/xvda"
+        Ebs:
+          DeleteOnTermination: true
+          VolumeType: gp2
+          VolumeSize: 20
+      KeyName:
+        Ref: KeyPair
+      SecurityGroups:
+      - "Fn::GetAtt":
+        - InstanceSG
+        - GroupId
+      # IamInstanceProfile:
+      #   Ref: InstanceProfile
+      InstanceType:
+        Ref: InstanceType
+      AssociatePublicIpAddress: true
+      ImageId:
+        Ref: EC2AMI
+
+  ASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      MinSize:
+        Ref: EC2Count
+      # Tags:
+      MaxSize:
+        Ref: EC2Count
+      HealthCheckGracePeriod: '600'
+      DesiredCapacity:
+        Ref: EC2Count
+      LaunchConfigurationName:
+        Ref: LaunchConfig
+      VPCZoneIdentifier:
+      - Ref: Subnet0
+      - Ref: Subnet1
+      - Ref: Subnet2
+      - Ref: Subnet3
+      HealthCheckType: EC2
+      # AvailabilityZones:
+      # - Fn::Select:
+      #   - 0
+      #   - Fn::GetAZs:
+      #       Ref: AWS::Region
+      # - Fn::Select:
+      #   - 1
+      #   - Fn::GetAZs:
+      #       Ref: AWS::Region
+#    CreationPolicy:
+#      ResourceSignal:
+#        Count:
+#          Ref: EC2Count
+#        Timeout: PT25M

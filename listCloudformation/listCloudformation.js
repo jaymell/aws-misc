@@ -30,36 +30,43 @@ var getContextVars = function(c) {
   };
 };
 
-var getStackList = function() {
+var getStackList = function(cb) {
+  
   var cf = new AWS.CloudFormation();
   var stackList = [];
-
-  var recurseList = function(params) {
+  var q = d3.queue();
+  
+  var recurseList = function(stackList, params) {
     if (!params) {
+      console.log('no params');
       params = {};
     }
     params["StackStatusFilter"] = properties.statuses;
-
+    // console.log('params: ', params);
     cf.listStacks(params, function(err, data) {
       if (err) {
         console.log(err, err.stack);
         throw err;
       }
-      console.log('stackList: ', stackList);
-      console.log('data: ', data);
+      // console.log('stackList: ', stackList);
+      // console.log('data: ', data);
       var regex = new RegExp('^(' + contextVars.env + '-' + contextVars.app + ')');
       data.StackSummaries.forEach(function(d) {
         // FIXME: don't hardcode this:
-        if (regex.exec(d.StackName) !== null ) {
+        if (regex.exec(d.StackName)) {
           stackList.push(d);
         }
       });
-      if (data.NextToken !== null) {
-        recurseList({NextToken: data.NextToken});
+      console.log('token: ', data.NextToken);
+      if (data.NextToken) {
+        recurseList(stackList, {NextToken: data.NextToken});
+      }
+      else {
+        return cb(null, stackList);
       }
     });
   };
-  recurseList();
+  recurseList(stackList);
 }; 
 
 var filterStacks = function(stackList, cb) {
@@ -68,19 +75,19 @@ var filterStacks = function(stackList, cb) {
 var handler = function(e, c, cb) {
   Yaml = require('yamljs');
   AWS = require('aws-sdk');
+  d3 = require('d3');
 
   properties = require('./properties.js');
   contextVars = getContextVars(c);
   AWS.config.update({region: contextVars.region});
-  AWS.config.update({profile: contextVars.region});
   if ('profile' in e) {
     console.log('Using profile: ', e.profile);
-    AWS.config.update({profile: e.profile});
+    var credentials = new AWS.SharedIniFileCredentials({profile: e.profile});
+    AWS.config.credentials = credentials;
   }
   AWS.config.update({maxRetries: 100});
 
-  var stacks = getStackList();
-  cb(null, stacks);
+  getStackList(cb);
 };
 
 module.exports = {
