@@ -30,13 +30,28 @@ var getContextVars = function(c) {
   };
 };
 
-var getStackList = function(cb) {
+var getStackInfo = function(stackList, cb) {
+  var q = d3.queue();
+  for(var i=0; i<stackList.length; i++) {
+    var params = {
+      StackName: stackList[i].StackName
+    };
+    q.defer(cf.describeStacks.bind(cf), params);
+  }
+  q.awaitAll(function(err, data) {
+    if (err) throw err;
+    cb(null, data);
+  });
+};
+
+var getStackList = function(e, cb) {
   
-  var cf = new AWS.CloudFormation();
   var stackList = [];
   var q = d3.queue();
-  
+  var levels = 0;
+
   var recurseList = function(stackList, params) {
+    levels++;
     if (!params) {
       console.log('no params');
       params = {};
@@ -50,9 +65,9 @@ var getStackList = function(cb) {
       }
       // console.log('stackList: ', stackList);
       // console.log('data: ', data);
+
       var regex = new RegExp('^(' + contextVars.env + '-' + contextVars.app + ')');
       data.StackSummaries.forEach(function(d) {
-        // FIXME: don't hardcode this:
         if (regex.exec(d.StackName)) {
           stackList.push(d);
         }
@@ -62,7 +77,8 @@ var getStackList = function(cb) {
         recurseList(stackList, {NextToken: data.NextToken});
       }
       else {
-        return cb(null, stackList);
+        console.log('leaving after ' + levels + ' recursions');
+        return getStackInfo(stackList, cb);
       }
     });
   };
@@ -79,15 +95,16 @@ var handler = function(e, c, cb) {
 
   properties = require('./properties.js');
   contextVars = getContextVars(c);
+  AWS.config.update({maxRetries: 100});
   AWS.config.update({region: contextVars.region});
   if ('profile' in e) {
     console.log('Using profile: ', e.profile);
     var credentials = new AWS.SharedIniFileCredentials({profile: e.profile});
     AWS.config.credentials = credentials;
   }
-  AWS.config.update({maxRetries: 100});
-
-  getStackList(cb);
+  // bad global!
+  cf = new AWS.CloudFormation();
+  getStackList(e, cb);
 };
 
 module.exports = {
