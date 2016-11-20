@@ -35,6 +35,48 @@ Parameters:
     Type: AWS::EC2::Image::Id
 
 Resources:
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: "/"
+      Policies:
+      - PolicyName: S3List
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Action:
+            - s3:ListBucket
+            Resource:
+            - arn:aws:s3:::jaymell-ip-mapper
+            - arn:aws:s3:::jaymell-camlistore-us-east-1
+            Effect: Allow
+      - PolicyName: S3Access
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Action:
+            - s3:GetObject
+            - s3:PutObject
+            - s3:DeleteObject
+            Resource:
+            - arn:aws:s3:::jaymell-ip-mapper/*
+            - arn:aws:s3:::jaymell-camlistore-us-east-1/*
+            Effect: Allow
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - ec2.amazonaws.com
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: "/"
+      Roles:
+      - Ref: InstanceRole
+
   InstanceSG:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
@@ -65,13 +107,22 @@ Resources:
             #!/bin/bash -xv
             exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
             apt-get update
-            apt-get install -y python2.7 git vim-common python-pip mongodb software-properties-common
-            apt-get-add-repository ppa:ansible/ansible
-            apt-get update
-            apt-get install ansible
-            pip install awscli
-            git clone https://github.com/jaymell/ansible-misc /root/ansible-misc
-            cd /root/ansible-misc && /usr/local/bin/ansible-playbook /root/ansible-misc/playbooks/golang-download-localhost.yml
+            debconf-set-selections <<< 'mysql-server mysql-server/root_password password ""'
+            debconf-set-selections <<< 'mysql-server mysql-server/root_password_again password ""'
+            apt-get install -y python2.7 git vim-common python-pip mongodb software-properties-common libssl-dev libffi-dev nodejs npm mysql-server
+            pip install awscli ansible
+            git clone https://github.com/jaymell/ansible-misc /tmp/ansible-misc
+            su - ubuntu /bin/bash -c "cd /tmp/ansible-misc && ansible-playbook -i localhost /tmp/ansible-misc/playbooks/golang-download-localhost.yml --extra-vars=user_name=ubuntu"
+            su - ubuntu /bin/bash -c "git clone https://github.com/jaymell/nodeSkel"
+            su - ubuntu /bin/bash -c "cd /home/ubuntu/nodeSkel && npm i && aws s3 cp s3://jaymell-ip-mapper/nodeSkel/config.js ."
+            cp /home/ubuntu/nodeSkel/nodeskel.service /etc/systemd/system/
+            systemctl daemon-reload
+            systemctl enable mongodb nodeskel
+            systemctl start mongodb nodeskel
+            su - ubuntu /bin/bash -c "export GOPATH=/home/ubuntu/go && go get github.com/jaymell/ip-mapper/... && go get github.com/jaymell/go-serve/..."
+            ### download ip-mapper config files from s3
+            ### install ip-mapper service file
+            ### get latest backup of mongo database
       BlockDeviceMappings:
       - DeviceName: "/dev/xvda"
         Ebs:
@@ -84,8 +135,8 @@ Resources:
       - "Fn::GetAtt":
         - InstanceSG
         - GroupId
-      # IamInstanceProfile:
-      #   Ref: InstanceProfile
+      IamInstanceProfile:
+        Ref: InstanceProfile
       InstanceType:
         Ref: InstanceType
       AssociatePublicIpAddress: true
@@ -111,6 +162,11 @@ Resources:
       - Ref: Subnet2
       - Ref: Subnet3
       HealthCheckType: EC2
+      Tags:
+      - PropagateAtLaunch: 'true'
+        Key: Name
+        Value: server-ASG
+
       # AvailabilityZones:
       # - Fn::Select:
       #   - 0
