@@ -1,0 +1,25 @@
+{
+  "name": "listcf",
+  "version": "1.0.0",
+  "description": "list cloudformation stacks",
+  "main": "listCloudformation.js",
+  "dependencies": {
+    "aws-sdk": "^2.7.5",
+    "bluebird": "^3.4.6",
+    "bluebird-queue": "0.0.8"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "node test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "github.com/jaymell/aws-misc"
+  },
+  "keywords": [
+    "aws",
+    "cloudformation"
+  ],
+  "author": "James Lucas",
+  "license": "GPL-3.0"
+}
