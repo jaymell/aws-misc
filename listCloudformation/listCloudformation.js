@@ -33,37 +33,20 @@ var getContextVars = function(c) {
   };
 };
 
-
 var getStackInfo = function(stackList, cb) {
   var cf = new AWS.CloudFormation();
   cf = Promise.promisifyAll(cf);
-  var q = d3.queue();
+  q = new BlueBirdQueue();
   for(var i=0; i<stackList.length; i++) {
     var params = {
       StackName: stackList[i].StackName
     };
-    q.defer(cf.describeStacks.bind(cf), params);
+    q.add(cf.describeStacksAsync.bind(cf)(params));
   }
-  q.awaitAll(function(err, data) {
-    if (err) throw err;
-    cb(null, data);
+  q.start().then(function(data) {
+    return cb(null, data);
   });
 };
-
-// var getStackInfo = function(stackList, cb) {
-//   var cf = new AWS.CloudFormation();
-//   cf = Promise.promisifyAll(cf);
-//   q = new BlueBirdQueue();
-//   for(var i=0; i<stackList.length; i++) {
-//     var params = {
-//       StackName: stackList[i].StackName
-//     };
-//     q.add(cf.describeStacksAsync.bind(cf), params);
-//   }
-//   q.start().then(function(data) {
-//     return cb(null, data);
-//   });
-// };
 
 
 var getStackList = function(e, cb) {
@@ -91,7 +74,7 @@ var getStackList = function(e, cb) {
       });
   };
   recurseList(stackList);
-}; 
+};
 
 
 var filterStacks = function(stackList, cb) {
@@ -102,7 +85,6 @@ var handler = function(e, c, cb) {
   AWS = require('aws-sdk');
   Promise = require("bluebird");
   BlueBirdQueue = require('bluebird-queue');
-  d3 = require('d3');
 
   properties = require('./properties.js');
   contextVars = getContextVars(c);
