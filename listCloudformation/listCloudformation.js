@@ -49,7 +49,7 @@ var getStackInfo = function(stackList, cb) {
 };
 
 
-var getStackList = function(e, cb) {
+var getStackList = function(event, cb) {
   var cf = new AWS.CloudFormation();
   cf = Promise.promisifyAll(cf);
   var stackList = [];
@@ -81,23 +81,23 @@ var filterStacks = function(stackList, cb) {
 };
 
 
-var handler = function(e, c, cb) {
+var handler = function(event, context, cb) {
   AWS = require('aws-sdk');
   Promise = require("bluebird");
   BlueBirdQueue = require('bluebird-queue');
 
   properties = require('./properties.js');
-  contextVars = getContextVars(c);
+  contextVars = getContextVars(context);
   AWS.config.update({maxRetries: 100});
   AWS.config.update({region: contextVars.region});
 
-  if ('profile' in e) {
-    console.log('Using profile: ', e.profile);
-    var credentials = new AWS.SharedIniFileCredentials({profile: e.profile});
+  if ('profile' in event) {
+    console.log('Using profile: ', event.profile);
+    var credentials = new AWS.SharedIniFileCredentials({profile: event.profile});
     AWS.config.credentials = credentials;
   }
 
-  getStackList(e, cb);
+  getStackList(event, cb);
 };
 
 module.exports = {
